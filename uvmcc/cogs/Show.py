@@ -213,8 +213,7 @@ class Show(commands.Cog):
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
-                await ctx.respond('There are no players in our database. Add yourselves with `/add <username>`!')
-                return
+                return await ctx.respond('There are no players in our database. Add yourselves with `/add <username>`!')
         elif player.lower() == 'me':
             # Show chess accounts linked to the author's discord_id
             _, results = await U.db_query('SELECT username FROM ChessUsernames '
@@ -223,10 +222,9 @@ class Show(commands.Cog):
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
-                await ctx.respond('You don\'t have any chess usernames linked to your Discord '
-                                  'account in our database. Use `/add <username> <site>`, '
-                                  'then `/iam <username> <site>` to link one!')
-                return
+                return await ctx.respond('You don\'t have any chess usernames linked to your Discord '
+                                         'account in our database. Use `/add <username> <site>`, '
+                                         'then `/iam <username> <site>` to link one!')
         elif U.is_valid_discord_tag(player):
             # Show one player by looking up chess accounts linked to their discord_id
             _, results = await U.db_query('SELECT username FROM ChessUsernames '
@@ -235,10 +233,9 @@ class Show(commands.Cog):
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
-                await ctx.respond(f'`{player}` doesn\'t have any chess usernames linked to their Discord '
-                                  'account in our database. They can use `/add <username> <site>`, '
-                                  'then `/iam <username> <site>` to link one!')
-                return
+                return await ctx.respond(f'`{player}` doesn\'t have any chess usernames linked to their Discord '
+                                         f'account in our database. They can use `/add <username> <site>`, '
+                                         f'then `/iam <username> <site>` to link one!')
         else:
             # Show one player by a chess username (not necessarily one in the db)
             usernames = [player]
@@ -248,8 +245,7 @@ class Show(commands.Cog):
             assert usernames, E.INTERNAL_ERROR_MSG + ' `usernames` should not be empty here'
         except AssertionError:
             logger.error(E.INTERNAL_ERROR_MSG, exc_info=True)
-            await ctx.respond(E.INTERNAL_ERROR_MSG)
-            return
+            return await ctx.respond(E.INTERNAL_ERROR_MSG)
 
         await Show._show_usernames(ctx, e, usernames)
 

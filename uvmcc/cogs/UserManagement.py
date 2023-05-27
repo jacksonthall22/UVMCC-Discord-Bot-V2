@@ -91,8 +91,7 @@ class UserManagement(commands.Cog):
 
             if not response:
                 # Not an existing username
-                await ctx.respond(f'`{username}` wasn\'t found on Lichess.')
-                return
+                return await ctx.respond(f'`{username}` wasn\'t found on Lichess.')
 
             user_data = response[0]
 
@@ -114,21 +113,19 @@ class UserManagement(commands.Cog):
                                                               U.SupportedSites.LICHESS))
 
                 if not results:  # it wasn't a dupe primary key
-                    await ctx.respond(E.DB_INTEGRITY_ERROR_MSG)
-                else:
-                    await ctx.respond(f'`{username_proper_caps}` is already in the Lichess database!')
-                return
+                    return await ctx.respond(E.DB_INTEGRITY_ERROR_MSG)
+
+                return await ctx.respond(f'`{username_proper_caps}` is already in the Lichess database!')
             elif exit_code != U.QueryExitCode.SUCCESS:
-                await ctx.respond(E.DB_ERROR_MSG)
-                return
+                return await ctx.respond(E.DB_ERROR_MSG)
 
             ''' Insertion successful ╰(*°▽°*)╯ '''
-            await ctx.respond(f'Added `{username_proper_caps}` ({U.SupportedSites.LICHESS}) to the database. '
-                              f'Use `/show` to see who\'s online!')
+            return await ctx.respond(f'Added `{username_proper_caps}` ({U.SupportedSites.LICHESS}) to the database. '
+                                     f'Use `/show` to see who\'s online!')
         elif site == U.SupportedSites.CHESS_COM:
-            await ctx.respond('Chess.com is not currently supported, but it will be soon!')
+            return await ctx.respond('Chess.com is not currently supported, but it will be soon!')
         else:
-            await ctx.respond(E.SITE_NOT_YET_SUPPORTED_FOR_ACTION_MSG(site))
+            return await ctx.respond(E.SITE_NOT_YET_SUPPORTED_FOR_ACTION_MSG(site))
 
     @discord.slash_command(name='remove',
                            description='Remove your chess username from our database')
@@ -152,13 +149,11 @@ class UserManagement(commands.Cog):
 
 
         if exit_code != U.QueryExitCode.SUCCESS:
-            await ctx.respond(E.DB_ERROR_MSG)
-            return
+            return await ctx.respond(E.DB_ERROR_MSG)
 
         if not results:
-            await ctx.respond(f'`{username}`{f" {(sites[0])}" if len(sites) == 1 else ""} '
-                              f'is not in the database.')
-            return
+            return await ctx.respond(f'`{username}`{f" {(sites[0])}" if len(sites) == 1 else ""} '
+                                     f'is not in the database.')
 
         # Remove the matching database entries
         exit_code, _ = await U.db_query('DELETE FROM ChessUsernames '
@@ -167,8 +162,7 @@ class UserManagement(commands.Cog):
                                         params=(username, json.dumps(sites)))
 
         if exit_code != U.QueryExitCode.SUCCESS:
-            await ctx.respond(E.DB_ERROR_MSG)
-            return
+            return await ctx.respond(E.DB_ERROR_MSG)
 
         # Success!
         await ctx.respond(f'Removed `{username}`{f" ({site})" if len(sites) == 1 else ""} '
@@ -187,19 +181,18 @@ class UserManagement(commands.Cog):
         exit_code, results = await U.db_query('SELECT username FROM ChessUsernames '
                                               'WHERE username LIKE ? '
                                               'AND site = ?',
-                                             params=(username, site))
+                                              params=(username, site))
 
         if exit_code != U.QueryExitCode.SUCCESS:
-            await ctx.respond(E.DB_ERROR_MSG)
-            return
+            return await ctx.respond(E.DB_ERROR_MSG)
 
         if not results:
-            await ctx.respond(f'Please run `/add {username} {f"({site})" if site is not None else "<site>"}` first!')
-            return
+            return await ctx.respond(f'Please run `/add {username} '
+                                     f'{f"({site})" if site is not None else "<site>"}` first!')
 
         if len(results) != 1:
-            await ctx.respond(E.DB_INTEGRITY_ERROR_MSG + f' There are multiple records for `{username}` ({site})')
-            return
+            return await ctx.respond(E.DB_INTEGRITY_ERROR_MSG +
+                                     f' There are multiple records for `{username}` ({site})')
 
         site = site.lower()
         if site == U.SupportedSites.LICHESS:
@@ -211,14 +204,13 @@ class UserManagement(commands.Cog):
                                                   params=(discord_id, username))
 
             if exit_code != U.QueryExitCode.SUCCESS:
-                await ctx.respond(E.DB_ERROR_MSG)
-                return
+                return await ctx.respond(E.DB_ERROR_MSG)
 
             await ctx.respond(f'Linked `{username}` ({site}) to `{discord_id}`. Use `/show me` to see your live games!')
         elif site == U.SupportedSites.CHESS_COM:
-            await ctx.respond('Chess.com is not currently supported, but it will be soon!')
+            return await ctx.respond('Chess.com is not currently supported, but it will be soon!')
         else:
-            await ctx.respond(E.SITE_NOT_YET_SUPPORTED_FOR_ACTION_MSG(site))
+            return await ctx.respond(E.SITE_NOT_YET_SUPPORTED_FOR_ACTION_MSG(site))
 
 
 def setup(bot: discord.Bot):

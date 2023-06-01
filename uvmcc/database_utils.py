@@ -1,9 +1,63 @@
-import uvmcc.constants as C
-import uvmcc.utils as U
+import uvmcc.error_msgs as E
 from uvmcc.uvmcc_logging import logger
 
+from typing import Tuple, Any, List
 
-async def init_dbs(db_file: str = C.DB_FILE):
+import discord
+
+import enum
+import aiosqlite
+
+
+DB_FILE = 'data.db'
+
+class QueryExitCode(enum.Enum):
+    SUCCESS = 0
+    UNKNOWN_FAILURE = 1
+    INTEGRITY_ERROR = 2
+
+async def db_query(query: str,
+                   *,
+                   params: Tuple[str | Any, ...] = None,
+                   db_file: str = DB_FILE,
+                   auto_respond_on_fail: discord.ApplicationContext | None = None) \
+        -> Tuple[QueryExitCode, List[Any] | None]:
+    """
+    Connect with the given sqlite3 database ``db_file`` via ``aiosqlite`` and execute ``query``.
+    Return a custom ``QueryExitCode`` and ``cur.fetchall()`` for the command. Providing a
+    ``discord.ApplicationContext`` for ``auto_respond_on_fail`` responds to the context with
+    an appropriate message if the query is not successful.
+    """
+
+    # Remove big whitespaces (just for logging; shouldn't be necessary for ``db.execute()``)
+    query = ' '.join(query.split())
+
+    async with aiosqlite.connect(db_file) as db:
+        try:
+            logger.info(f'Executing: db_query(db_file={db_file},query={query},params={params})')
+
+            async with db.execute(query, params) as cursor:
+                query_result = await cursor.fetchall()
+            await db.commit()
+
+            logger.info('Query succeeded.')
+            return QueryExitCode.SUCCESS, query_result
+
+        except aiosqlite.IntegrityError as e:
+            logger.warning(
+                f'Query FAILED: aiosqlite.IntegrityError. Maybe due to insertion of duplicate primary key? '
+                f'Stack trace:\n{e}')
+            if auto_respond_on_fail:
+                await auto_respond_on_fail.respond(E.INTERNAL_ERROR_MSG)
+            return QueryExitCode.INTEGRITY_ERROR, None
+
+        except Exception as e:
+            logger.error(f'Query FAILED: {type(e).__name__}. Stack trace:\n{e}')
+            if auto_respond_on_fail:
+                await auto_respond_on_fail.respond(E.DB_ERROR_MSG)
+            return QueryExitCode.UNKNOWN_FAILURE, None
+
+async def init_dbs(db_file: str = DB_FILE):
     logger.info('==================')
     logger.info('Calling init_dbs()')
     logger.info('------------------')
@@ -28,12 +82,12 @@ async def init_dbs(db_file: str = C.DB_FILE):
                 'DROP TABLE MatchTerminations',
             ]
             for q in DROP_QUERIES:
-                await U.db_query(q)
+                await db_query(q)
             logger.info('DONE')
             logger.info('======================================')
         except AssertionError:
-            logger.info('ATTEMPTED TO RESET VOTE CHESS TABLES FROM ANOTHER FILE. Please run '
-                        'init_dbs.py as \'__main__\' to delete & reset tables.')
+            logger.info(f'ATTEMPTED TO RESET VOTE CHESS TABLES FROM ANOTHER FILE. Please run '
+                        f'`{__name__}.py` as \'__main__\' to delete & reset tables.')
 
     QUERIES = [
         'CREATE TABLE IF NOT EXISTS DiscordUsers (discord_id TEXT PRIMARY KEY)',
@@ -126,7 +180,7 @@ async def init_dbs(db_file: str = C.DB_FILE):
     ]
 
     for query in QUERIES:
-        await U.db_query(query, db_file=db_file)
+        await db_query(query, db_file=db_file)
 
     logger.info('-------------------')
     logger.info('Finished init_dbs()')

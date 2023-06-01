@@ -30,8 +30,5 @@ DISCORD_LOGGING_LEVEL = logging.DEBUG
 SanStrT = str
 UciStrT = str
 
-# Database stuff
-DB_FILE = 'data.db'
-
 # Other
 LICHESS_BROWN_HEX = 0xB58863

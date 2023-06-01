@@ -1,15 +1,12 @@
-from uvmcc.uvmcc_logging import logger
 import uvmcc.constants as C
-import uvmcc.error_msgs as E
+
 import uvmcc.FenUtils as F
 
-from typing import Tuple, List, Any, Sequence, Iterable, Generator, Dict, AsyncGenerator, AsyncIterator
+from typing import Tuple, Any, Sequence, Iterable, Dict, AsyncIterator
 
 import chess
 import chess.pgn
-import discord
 
-import aiosqlite  # async-compatible sqlite https://pypi.org/project/aiosqlite/
 import enum
 import itertools
 import aiohttp
@@ -20,51 +17,6 @@ class SupportedSites(enum.StrEnum):
     LICHESS = 'lichess.org'
     CHESS_COM = 'chess.com'
 SUPPORTED_SITES_LIST = [*SupportedSites]
-
-class QueryExitCode(enum.Enum):
-    SUCCESS = 0
-    UNKNOWN_FAILURE = 1
-    INTEGRITY_ERROR = 2
-
-async def db_query(query: str,
-                   *,
-                   params: Tuple[str|Any, ...] = None,
-                   db_file: str = C.DB_FILE,
-                   auto_respond_on_fail: discord.ApplicationContext | None = None) \
-        -> Tuple[QueryExitCode, List[Any] | None]:
-    """
-    Connect with the given sqlite3 database ``db_file`` via ``aiosqlite`` and execute ``query``.
-    Return a custom ``QueryExitCode`` and ``cur.fetchall()`` for the command. Providing a
-    ``discord.ApplicationContext`` for ``auto_respond_on_fail`` responds to the context with
-    an appropriate message if the query is not successful.
-    """
-
-    # Remove big whitespaces (just for logging; shouldn't be necessary for ``db.execute()``)
-    query = ' '.join(query.split())
-
-    async with aiosqlite.connect(db_file) as db:
-        try:
-            logger.info(f'Executing: db_query(db_file={db_file},query={query},params={params})')
-
-            async with db.execute(query, params) as cursor:
-                query_result = await cursor.fetchall()
-            await db.commit()  # TODO not sure if this is necessary
-
-            logger.info('Query succeeded.')
-            return QueryExitCode.SUCCESS, query_result
-
-        except aiosqlite.IntegrityError as e:
-            logger.warning(f'Query FAILED: aiosqlite.IntegrityError. Maybe due to insertion of duplicate primary key? '
-                           f'Stack trace:\n{e}')
-            if auto_respond_on_fail:
-                await auto_respond_on_fail.respond(E.INTERNAL_ERROR_MSG)
-            return QueryExitCode.INTEGRITY_ERROR, None
-
-        except Exception as e:
-            logger.error(f'Query FAILED: {type(e).__name__}. Stack trace:\n{e}')
-            if auto_respond_on_fail:
-                await auto_respond_on_fail.respond(E.DB_ERROR_MSG)
-            return QueryExitCode.UNKNOWN_FAILURE, None
 
 def grouper(iterable: Iterable, n: int, fillvalue: Any = None):
     args = [iter(iterable)] * n

@@ -1,7 +1,7 @@
 import uvmcc.constants as C
 import uvmcc.utils as U
 import uvmcc.error_msgs as E
-import uvmcc.PgnUtils as P
+import uvmcc.database_utils as D
 from uvmcc.uvmcc_logging import logger
 
 from typing import Dict, List, Any
@@ -11,12 +11,7 @@ import chess.pgn
 import discord
 from discord.ext import commands
 
-import aiohttp
 import io
-import json
-import requests as requests
-import lichess.api
-import ndjson
 
 
 class Show(commands.Cog):
@@ -195,7 +190,6 @@ class Show(commands.Cog):
                      url=C.LINK_TO_CODE)
         await ctx.response.defer(invisible=False)
 
-
         '''
         Create a list of usernames to show based on arguments
         =====================================================
@@ -206,7 +200,7 @@ class Show(commands.Cog):
         '''
         if not player:
             # Show all players in db
-            _, results = await U.db_query('SELECT username FROM ChessUsernames '
+            _, results = await D.db_query('SELECT username FROM ChessUsernames '
                                           'WHERE site = ?'
                                           'ORDER BY username',
                                           params=(U.SupportedSites.LICHESS,),
@@ -216,7 +210,7 @@ class Show(commands.Cog):
                 return await ctx.respond('There are no players in our database. Add yourselves with `/add <username>`!')
         elif player.lower() == 'me':
             # Show chess accounts linked to the author's discord_id
-            _, results = await U.db_query('SELECT username FROM ChessUsernames '
+            _, results = await D.db_query('SELECT username FROM ChessUsernames '
                                           'WHERE discord_id = ?',
                                           params=(str(ctx.author),),
                                           auto_respond_on_fail=ctx)
@@ -227,7 +221,7 @@ class Show(commands.Cog):
                                          'then `/iam <username> <site>` to link one!')
         elif U.is_valid_discord_tag(player):
             # Show one player by looking up chess accounts linked to their discord_id
-            _, results = await U.db_query('SELECT username FROM ChessUsernames '
+            _, results = await D.db_query('SELECT username FROM ChessUsernames '
                                           'WHERE discord_id = ?',
                                           params=(player,),
                                           auto_respond_on_fail=ctx)

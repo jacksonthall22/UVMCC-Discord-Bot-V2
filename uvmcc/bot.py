@@ -1,5 +1,5 @@
 import uvmcc.constants as C
-import uvmcc.init_dbs as D
+import uvmcc.database_utils as D
 from uvmcc.uvmcc_logging import logger
 
 import discord

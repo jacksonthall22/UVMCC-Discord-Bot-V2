@@ -73,7 +73,7 @@ class TestFenUtils(unittest.TestCase):
         fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         component = FenComponent.BOARD_FEN
         expected_indices = (0, 43)
-        result = FenUtils.indices_of_component_delimeters(fen, component)
+        result = FenUtils.indices_of_component_delimiters(fen, component)
         self.assertEqual(result, expected_indices)
 
 

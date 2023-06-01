@@ -92,7 +92,7 @@ class FenUtils:
         return idx
 
     @staticmethod
-    def indices_of_component_delimeters(fen: str,
+    def indices_of_component_delimiters(fen: str,
                                         component: FenComponent,
                                         *,
                                         validate: bool = True) -> (int, int):

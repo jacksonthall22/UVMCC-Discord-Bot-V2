@@ -1,7 +1,6 @@
 import uvmcc.constants as C
 
 import logging
-import discord
 
 
 '''

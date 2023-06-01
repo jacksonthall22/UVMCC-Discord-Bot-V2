@@ -8,7 +8,6 @@ from typing import List
 
 import discord
 from discord.ext import commands
-import berserk
 
 import json
 import requests
@@ -84,7 +83,7 @@ class UserManagement(commands.Cog):
                                            autocomplete=discord.utils.basic_autocomplete(_autocomplete_added_username)),
                   site: discord.Option(str,
                                        description='What site is this username for?',
-                                       choices=U.SUPPORTED_SITES_LIST + ['both'])):
+                                       choices=U.SUPPORTED_SITES_LIST)):
 
         site = site.lower()
         if site == U.SupportedSites.LICHESS:

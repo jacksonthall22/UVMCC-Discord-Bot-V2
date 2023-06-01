@@ -1,8 +1,7 @@
 import uvmcc.constants as C
-
 import uvmcc.FenUtils as F
 
-from typing import Tuple, Any, Sequence, Iterable, Dict, AsyncIterator
+from typing import Tuple, Any, Sequence, Iterable, Dict, AsyncIterator, TypedDict, NotRequired
 
 import chess
 import chess.pgn
@@ -18,10 +17,62 @@ class SupportedSites(enum.StrEnum):
     CHESS_COM = 'chess.com'
 SUPPORTED_SITES_LIST = [*SupportedSites]
 
+
+class ClockJson(TypedDict):
+    """
+    Game clock description (following Lichess API's output).
+    """
+    initial: int
+    increment: int
+    totalTime: NotRequired[int]
+
+
+def format_lichess_time_control(clock_json: ClockJson) -> str:
+    """
+    Get a string like "5+3" from the Lichess API's clock description JSON format.
+    For times where ``initial`` is less than 60 seconds are formatted as a fraction
+    (¼, ½, or ¾) and raise an error if ``initial`` is not equal to 3 or not divisible
+    by 15.
+
+    Examples:
+    >>> format_lichess_time_control({'initial': 300, 'increment': 3})
+    '5+3'
+    >>> format_lichess_time_control({'initial': 180, 'increment': 2})
+    '3+2'
+    >>> format_lichess_time_control({'initial': 45, 'increment': 0})
+    '¾+0'
+    >>> format_lichess_time_control({'initial': 3, 'increment': 1})
+    '0+1'
+    >>> format_lichess_time_control({'initial': 20, 'increment': 0})
+    Traceback (most recent call last):
+    ...
+    ValueError: Invalid initial time. clock_json:
+    {'initial': 20, 'increment': 0}
+    >>> format_lichess_time_control({'initial': 15, 'increment': 0})
+    '¼+0'
+    """
+    init = clock_json['initial']
+    incr = clock_json['increment']
+
+    if init < 60:
+        if init == 3:
+            return f'0+{incr}'
+
+        if init == 15:
+            return f'¼+{incr}'
+        elif init == 30:
+            return f'½+{incr}'
+        elif init == 45:
+            return f'¾+{incr}'
+        else:
+            raise ValueError(f'Invalid initial time. clock_json:\n{clock_json}')
+    else:
+        # Integer-divide only if initial is a multiple of 60
+        return f'{init // 60 if init % 60 == 0 else init / 60}+{incr}'
+
 def grouper(iterable: Iterable, n: int, fillvalue: Any = None):
     args = [iter(iterable)] * n
     return itertools.zip_longest(*args, fillvalue=fillvalue)
-
 
 def is_valid_discord_tag(maybe_tag: str) -> bool:
     import re

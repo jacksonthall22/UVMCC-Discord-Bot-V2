@@ -29,6 +29,6 @@ for cog in COGS:
 
 
 try:
-    bot.run(C.TOKEN)  # run the bot with the token
+    bot.run(C.BOT_TOKEN)  # run the bot with the token
 except Exception as e:
     logger.error(f'bot.run() FAILED: {type(e).__name__}. Stack trace:\n{e}')

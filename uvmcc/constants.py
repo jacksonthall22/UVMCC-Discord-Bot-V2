@@ -10,9 +10,9 @@ import berserk
 
 # Discord bot token
 dotenv.load_dotenv()
-TOKEN = os.getenv('TOKEN')
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-# Client session
+# Berserk client session
 BERSERK_CLIENT = berserk.Client()
 
 # Text strings

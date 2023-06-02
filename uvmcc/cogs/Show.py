@@ -72,8 +72,50 @@ class Show(commands.Cog):
             ''' Set the discord embed field '''
             lines = []
             for i, (username, live_game_data) in enumerate(live_games_data.items()):
+                '''
+                Example live_game_data:
+                
+                {
+                    'id': 'Qhvz5ujU',
+                    'rated': True,
+                    'variant': 'standard',
+                    'speed': 'blitz',
+                    'perf': 'blitz',
+                    'createdAt': datetime.datetime(2023, 6, 2, 19, 24, 32, 726000, tzinfo=datetime.timezone.utc),
+                    'lastMoveAt': datetime.datetime(2023, 6, 2, 19, 26, 0, 114000, tzinfo=datetime.timezone.utc),
+                    'status': 'started',
+                    'players': {
+                        'white': {
+                            'user': {
+                                'name': 'Ellaijio',
+                                'title': 'IM',
+                                'id': 'ellaijio'
+                            },
+                            'rating': 2603
+                        },
+                        'black': {
+                            'user': {
+                                'name': 'pulvettd',
+                                'title': 'IM',
+                                'id': 'pulvettd'
+                            },
+                            'rating': 2526
+                        }
+                    },
+                    'moves': 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 f4 e5 Nf3 Nbd7 g4 Nxg4 Bc4 h6 Rg1 Ngf6 Be3 b5 Bd5 b4 Bxa8 bxc3 bxc3 Qa5 Qd2 Be7',
+                    'clock': {
+                        'initial': 180,
+                        'increment': 0,
+                        'totalTime': 180
+                    }
+                }
+                '''
+
+                # Top-rated game gets the featured img
                 shown_below = 'Shown below - ' if i == 0 else ''
-                url = C.LICHESS_GAME_LINK(live_game_data['id'])
+
+                player_color: chess.Color = username == live_game_data['players']['white']['name']
+                url = C.LICHESS_GAME_LINK(live_game_data['id'], player_color)
 
                 time_ctrl = U.format_lichess_time_control(live_game_data['clock'])
 
@@ -151,6 +193,9 @@ class Show(commands.Cog):
         After response is sent, stream featured game moves
         and update the embed image until game is over
         '''
+        # TODO - Explore discord docs to see if pre-uploading attachment and using it as
+        #   embed url is less jumpy when updating:
+        #   https://discord.com/developers/docs/reference#editing-message-attachments-using-attachments-within-embeds
         try:
             featured_game_obj
             try:

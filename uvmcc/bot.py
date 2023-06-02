@@ -23,6 +23,7 @@ COGS = [
     'Greetings',
     'Show',
     'UserManagement',
+    'Voice'
 ]
 for cog in COGS:
     bot.load_extension(f'cogs.{cog}')

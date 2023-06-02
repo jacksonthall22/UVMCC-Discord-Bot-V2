@@ -2,6 +2,8 @@ from uvmcc import __version__
 
 from typing import Callable
 
+import chess
+
 import dotenv
 import logging
 import os
@@ -18,7 +20,8 @@ BERSERK_CLIENT = berserk.Client()
 # Text strings
 LINK_TO_CODE = 'https://github.com/jacksonthall22/UVMCC-Discord-Bot'
 EMBED_FOOTER = f'♟  I\'m a bot, beep boop  ♟  Click my icon for the code  ♟  v{__version__}  ♟'
-LICHESS_GAME_LINK: Callable[[str], str] = lambda game_id: f'https://lichess.org/{game_id}'
+LICHESS_GAME_LINK: Callable[[str, chess.Color], str] \
+    = lambda game_id, color: f'https://lichess.org/{game_id}/{chess.COLOR_NAMES[color]}'
 
 # Logging stuff
 LOG_FILENAME = '.uvmcc.log'

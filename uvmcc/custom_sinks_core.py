@@ -36,7 +36,7 @@ class StreamSink(Sink):
 
     def set_user(self, user_id: int):
         self.user_id = user_id
-        print(f"Set user ID: {user_id}")
+        print(f'Set user ID: {user_id}')
 
 
 class StreamBuffer:
@@ -70,8 +70,7 @@ class StreamBuffer:
             audio_segment = AudioSegment(data=byte_slice,
                                          sample_width=self.sample_width,
                                          frame_rate=self.sample_rate,
-                                         channels=self.channels,
-                                         )
+                                         channels=self.channels)
 
             # removing the old stinky trash data from buffer - ew get it out of there already
             self.byte_buffer = self.byte_buffer[self.buff_lim:]
@@ -81,5 +80,5 @@ class StreamBuffer:
             self.segment_buffer.put(audio_segment)
 
             # temporary for validating process
-            audio_segment.export(f"output{self.ct}.mp3", format="mp3")
+            audio_segment.export(f'output{self.ct}.mp3', format='mp3')
             self.ct += 1

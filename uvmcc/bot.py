@@ -20,10 +20,10 @@ async def on_ready():
 
 
 COGS = [
-    'Greetings',
+    # 'Greetings',
     'Show',
     'UserManagement',
-    'Voice'
+    # 'Voice'
 ]
 for cog in COGS:
     bot.load_extension(f'cogs.{cog}')

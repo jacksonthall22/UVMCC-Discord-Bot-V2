@@ -11,7 +11,7 @@ import aiosqlite
 
 DB_FILE = 'data.db'
 
-class QueryExitCode(enum.Enum):
+class QueryExitCode(enum.IntEnum):
     SUCCESS = 0
     UNKNOWN_FAILURE = 1
     INTEGRITY_ERROR = 2

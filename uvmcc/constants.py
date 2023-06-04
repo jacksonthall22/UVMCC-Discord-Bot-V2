@@ -14,6 +14,11 @@ import berserk
 dotenv.load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
+# Discord users to mention for bugs (right click on profile in Discord, "Copy User ID")
+BUG_FIXERS = {
+    'Cubigami#3114': '397943957625110540',
+}
+
 # Berserk client session
 BERSERK_CLIENT = berserk.Client()
 

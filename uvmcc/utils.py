@@ -38,6 +38,9 @@ def random_code(length: int,
     return ''.join(random.choices(alphabet, k=length))
 
 
+def format_discord_user_tag(user_id: str) -> str:
+    return f'<@{user_id}>'
+
 def format_discord_relative_time(unix_time: int | float = datetime.datetime.now().timestamp(),
                                  *,
                                  td: datetime.timedelta | None = None) -> str:

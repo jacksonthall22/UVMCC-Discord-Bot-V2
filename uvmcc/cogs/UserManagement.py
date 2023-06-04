@@ -9,6 +9,9 @@ from typing import List
 import discord
 from discord.ext import commands
 
+import aiohttp
+import asyncio
+import datetime
 import json
 import requests
 
@@ -19,21 +22,26 @@ class UserManagement(commands.Cog):
         self.bot = bot
 
     @staticmethod
-    async def _autocomplete_added_username(ctx: discord.AutocompleteContext) -> List[str]:
-        """ Query the Lichess/Chess.com (to do) APIs for autocomplete suggestions for the given partial username. """
+    async def _autocomplete_adding_username(ctx: discord.AutocompleteContext) -> List[str]:
+        """
+        Query the Lichess/Chess.com APIs for autocomplete suggestions for the given partial username.
+
+        TODO - Merge Chess.com username autocompletion results, but first check if
+               ``site`` was already was inputted (we can get this through ctx somehow)
+        """
         partial_usernames = ctx.options['username']
 
         # Note: Not yet supported in berserk
         url = f'https://lichess.org/api/player/autocomplete?term={partial_usernames}'
         headers = {'Accept': 'application/x-ndjson'}
-        response = requests.get(url, headers=headers)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    logger.error(f'Failed to get autocomplete suggestions for username {partial_usernames} from '
+                                 f'Lichess API (response.status={response.status})')
+                    return []
 
-        if response.status_code != 200:
-            logger.error(f'Failed to get autocomplete suggestions for username {partial_usernames} from Lichess API ('
-                         f'response.status_code={response.status_code})')
-            return []
-
-        return json.loads(response.text)
+                return json.loads(await response.text())
 
     @staticmethod
     async def _autocomplete_chess_usernames_in_db(ctx: discord.AutocompleteContext) -> List[str]:
@@ -80,7 +88,7 @@ class UserManagement(commands.Cog):
                   ctx: discord.ApplicationContext,
                   username: discord.Option(str,
                                            description='Your chess username',
-                                           autocomplete=discord.utils.basic_autocomplete(_autocomplete_added_username)),
+                                           autocomplete=discord.utils.basic_autocomplete(_autocomplete_adding_username)),
                   site: discord.Option(str,
                                        description='What site is this username for?',
                                        choices=U.SUPPORTED_SITES_LIST)):

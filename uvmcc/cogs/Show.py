@@ -4,7 +4,7 @@ import uvmcc.error_msgs as E
 import uvmcc.database_utils as D
 from uvmcc.uvmcc_logging import logger
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 import chess
 import chess.pgn
@@ -27,8 +27,18 @@ class Show(commands.Cog):
                               e: discord.Embed,
                               usernames: List[str],
                               *,
+                              msg_on_empty: str = None,
                               stream_new_moves: bool = False,
                               only_live: bool = False):
+        if not usernames:
+            assert msg_on_empty is not None, \
+                E.INTERNAL_ERROR_MSG + ' msg_on_empty should not be None here. Error in _get_usernames()?'
+            e.add_field(name='No players :(', value=msg_on_empty)
+            return await ctx.respond(embed=e)
+
+        logger.debug(f'_show_usernames(): usernames={usernames}, '
+                     f'stream_new_moves={stream_new_moves}, '
+                     f'only_live={only_live}')
         user_statuses = C.BERSERK_CLIENT.users.get_realtime_statuses(*usernames, with_game_ids=True)
         playing = [d for d in user_statuses if d.get('playing')]
         online = [d for d in user_statuses if not d.get('playing') and d.get('online')]
@@ -193,9 +203,8 @@ class Show(commands.Cog):
         After response is sent, stream featured game moves
         and update the embed image until game is over
         '''
-        # TODO - Explore discord docs to see if pre-uploading attachment and using it as
-        #   embed url is less jumpy when updating:
-        #   https://discord.com/developers/docs/reference#editing-message-attachments-using-attachments-within-embeds
+
+        # Explicit raise for PyCharm typehints
         try:
             featured_game_obj
             try:
@@ -211,8 +220,7 @@ class Show(commands.Cog):
                 print(E.INTERNAL_ERROR_MSG + 'Failed to set all featured_game_... vars')
                 return
         except NameError:
-            print('test: no featured_game_obj')
-            return
+            raise
 
         # We want to skip packets until we get to the one where the FEN and last move are
         # the same as in the initial packet (**not** until it's the same as the FEN set in the
@@ -224,20 +232,24 @@ class Show(commands.Cog):
                 continue
 
             # Update the embed image
+            # TODO - Explore discord docs to see if uploading attachment and using it as
+            #   embed url is less jumpy:
+            #   https://discord.com/developers/docs/reference#editing-message-attachments-using-attachments-within-embeds
             new_board_img_url = U.get_board_image_url(packet['fen'],
                                                       orientation=featured_game_orientation,
                                                       last_move_uci=packet.get('lm'),
                                                       size=Show.EMBED_BOARD_SIZE_PX)
             e.set_image(url=new_board_img_url)
-            # await ctx.interaction.edit_original_response(embed=e)
             await msg.edit(embed=e)
 
+        # Explicit raise for PyCharm typehints
         try:
             packet
         except NameError:
-            return
+            raise
 
-        # At this point the game is over, and we have the last packet with info about result
+        ''' At this point the game is over, and we have the last packet with info about result '''
+
         if packet.get('winner') is None:
             result = '1/2-1/2'
         elif packet['winner'] == 'white':
@@ -265,6 +277,7 @@ class Show(commands.Cog):
         # Update name and value in the appropriate EmbedField
         # https://github.com/lichess-org/lila/blob/master/ui/game/src/status.ts
         STATUS_ID_MAP = {
+            -1: ('{} lost', '{} won'),  # Fallback
             25: ('Aborted',),
             30: ('{} got checkmated', '{} won by checkmate'),
             31: ('{} resigned', '{} won by resignation'),
@@ -274,10 +287,13 @@ class Show(commands.Cog):
             35: ('{} lost on time', '{} won on time'),
             36: ('{} lost due to cheating', '{} won, opponent cheated'),
             37: ('{} lost by forfeit', '{} won, opponent forfeited'),
-            60: ('{} lost', '{} won'),
-
+            60: ('{} lost', '{} won'),  # Variant end
         }
         status_id = packet['status']['id']
+        if status_id not in STATUS_ID_MAP:
+            logger.warning(f'Unexpected status_id (reason for game end). packet[\'status\']: {packet["status"]}. '
+                           f'Check https://github.com/lichess-org/lila/blob/master/ui/game/src/status.ts')
+            status_id = -1
         end_msg = STATUS_ID_MAP[status_id][featured_player_won or 0].format(featured_player_username)
 
         lines = []
@@ -303,17 +319,19 @@ class Show(commands.Cog):
         return await msg.edit(embed=e)
 
     @staticmethod
-    async def _get_usernames(ctx, player, site) -> List[str]:
+    async def _get_usernames(ctx, player, site) -> Tuple[List[str], str | None]:
         """
-        Return a non-empty list of usernames to show in a response based on user's given arguments.
+        Return a list of usernames to show in a response based on user's command arguments,
+        and a ``msg_on_empty`` message to respond with if the resulting list is empty
+        (message is ``None`` for a non-empty list).
 
-        We want a list ``usernames`` to search on Lichess/Chess.com. If user entered
-        a value for ``player`` and it's not a Discord tag/ID, it should be interpreted
-        as a chess username (so we can set ``usernames`` right away). For other cases,
-        we need to do a ``db_query()`` to get the appropriate usernames.
+        If user entered a value for ``player`` and it's not a Discord tag/ID, it should be
+        interpreted as a chess username (so we can set ``usernames`` right away). For other
+        cases, we need to do a ``db_query()`` to get the appropriate usernames.
 
         TODO: use ``site`` to handle Lichess/chess.com APIs differently.
         """
+        msg_on_empty = None
         if not player:
             # Show all players in db
             _, results = await D.db_query('SELECT username FROM ChessUsernames '
@@ -323,8 +341,8 @@ class Show(commands.Cog):
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
-                return await ctx.respond(f'There are no players in our database. Add yourselves with '
-                                         f'`/add player:<username> site:<{"/".join(U.SupportedSites)}>`!')
+                msg_on_empty = f'There are no players in our database. Add yourselves with ' \
+                               f'`/add player:<username> site:<{"/".join(U.SupportedSites)}>`!'
         elif player.lower() == 'me':
             # Show chess accounts linked to the author's discord_id
             _, results = await D.db_query('SELECT username FROM ChessUsernames '
@@ -333,10 +351,10 @@ class Show(commands.Cog):
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
-                return await ctx.respond(f'You don\'t have any chess usernames linked to your Discord '
-                                         f'account in our database. Use `/add player:<username> '
-                                         f'site:<{"/".join(U.SupportedSites)}>`, then '
-                                         f'`/iam player:<username> site:<{"/".join(U.SupportedSites)}>` to link one!')
+                msg_on_empty = f'You don\'t have any chess usernames linked to your Discord ' \
+                               f'account in our database. Use `/add player:<username> ' \
+                               f'site:<{"/".join(U.SupportedSites)}>`, then ' \
+                               f'`/iam player:<username> site:<{"/".join(U.SupportedSites)}>` to link one!'
         elif U.is_valid_discord_tag(player):
             # Show one player by looking up chess accounts linked to their discord_id
             _, results = await D.db_query('SELECT username FROM ChessUsernames '
@@ -345,21 +363,15 @@ class Show(commands.Cog):
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
-                return await ctx.respond(f'`{player}` doesn\'t have any chess usernames linked to their Discord '
-                                         f'account in our database. They can use `/add player:<username> '
-                                         f'site:<{"/".join(U.SupportedSites)}>`, then `/iam player:<username> '
-                                         f'site:<{"/".join(U.SupportedSites)}>` to link one!')
+                msg_on_empty = f'`{player}` doesn\'t have any chess usernames linked to their Discord ' \
+                               f'account in our database. They can use `/add player:<username> ' \
+                               f'site:<{"/".join(U.SupportedSites)}>`, then `/iam player:<username> ' \
+                               f'site:<{"/".join(U.SupportedSites)}>` to link one!'
         else:
             # Show one player by a chess username (not necessarily one in the db)
             usernames = [player]
 
-        try:
-            assert usernames, E.INTERNAL_ERROR_MSG + ' `usernames` should not be empty here'
-        except AssertionError:
-            logger.error(E.INTERNAL_ERROR_MSG, exc_info=True)
-            return await ctx.respond(E.INTERNAL_ERROR_MSG)
-
-        return usernames
+        return usernames, msg_on_empty
 
     @discord.slash_command(name='show',
                            description='Show player statuses on Lichess (Chess.com support coming soon!)')
@@ -376,10 +388,12 @@ class Show(commands.Cog):
                      url=C.LINK_TO_CODE)
 
         await ctx.response.defer(invisible=False)
-        usernames = await Show._get_usernames(ctx, player, site)
+        usernames, msg_on_empty = await Show._get_usernames(ctx, player, site)
+        print('test: usernames (1):', usernames)
         await Show._show_usernames(ctx,
                                    e,
                                    usernames,
+                                   msg_on_empty=msg_on_empty,
                                    stream_new_moves=False,
                                    only_live=False)
 
@@ -400,6 +414,7 @@ class Show(commands.Cog):
 
         await ctx.response.defer(invisible=False)
         usernames = await Show._get_usernames(ctx, player, site)
+        print('test: usernames (2):', usernames)
         await Show._show_usernames(ctx,
                                    e,
                                    usernames,

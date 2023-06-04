@@ -117,7 +117,7 @@ class UserManagement(commands.Cog):
 
                 return await ctx.respond(f'`{username_proper_caps}` is already in the Lichess database!')
             elif exit_code != D.QueryExitCode.SUCCESS:
-                return await ctx.respond(E.DB_ERROR_MSG)
+                return await ctx.respond(E.DB_ERROR_MSG(exit_code))
 
             ''' Insertion successful ╰(*°▽°*)╯ '''
             return await ctx.respond(f'Added `{username_proper_caps}` ({U.SupportedSites.LICHESS}) to the database. '
@@ -149,7 +149,7 @@ class UserManagement(commands.Cog):
 
 
         if exit_code != D.QueryExitCode.SUCCESS:
-            return await ctx.respond(E.DB_ERROR_MSG)
+            return await ctx.respond(E.DB_ERROR_MSG(exit_code))
 
         if not results:
             return await ctx.respond(f'`{username}`{f" {(sites[0])}" if len(sites) == 1 else ""} '
@@ -162,7 +162,7 @@ class UserManagement(commands.Cog):
                                         params=(username, json.dumps(sites)))
 
         if exit_code != D.QueryExitCode.SUCCESS:
-            return await ctx.respond(E.DB_ERROR_MSG)
+            return await ctx.respond(E.DB_ERROR_MSG(exit_code))
 
         # Success!
         await ctx.respond(f'Removed `{username}`{f" ({site})" if len(sites) == 1 else ""} '
@@ -184,7 +184,7 @@ class UserManagement(commands.Cog):
                                               params=(username, site))
 
         if exit_code != D.QueryExitCode.SUCCESS:
-            return await ctx.respond(E.DB_ERROR_MSG)
+            return await ctx.respond(E.DB_ERROR_MSG(exit_code))
 
         if not results:
             return await ctx.respond(f'Please run `/add {username} '
@@ -204,7 +204,10 @@ class UserManagement(commands.Cog):
                                                   params=(discord_id, username))
 
             if exit_code != D.QueryExitCode.SUCCESS:
-                return await ctx.respond(E.DB_ERROR_MSG)
+                e = discord.Embed(title='Could not link username',
+                                  description=f'{E.DB_ERROR_MSG(exit_code)}',
+                                  color=discord.Color.blurple())
+                return await ctx.interaction.edit_original_response(embed=e)
 
             await ctx.respond(f'Linked `{username}` ({site}) to `{discord_id}`. Use `/show me` to see your live games!')
         elif site == U.SupportedSites.CHESS_COM:

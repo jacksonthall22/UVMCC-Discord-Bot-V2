@@ -53,9 +53,10 @@ async def db_query(query: str,
 
         except Exception as e:
             logger.error(f'Query FAILED: {type(e).__name__}. Stack trace:\n{e}')
+            exit_code = QueryExitCode.UNKNOWN_FAILURE
             if auto_respond_on_fail:
-                await auto_respond_on_fail.respond(E.DB_ERROR_MSG)
-            return QueryExitCode.UNKNOWN_FAILURE, None
+                await auto_respond_on_fail.respond(E.DB_ERROR_MSG(exit_code))
+            return exit_code, None
 
 async def init_dbs(db_file: str = DB_FILE):
     logger.info('==================')

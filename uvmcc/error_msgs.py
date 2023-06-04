@@ -1,5 +1,6 @@
 import uvmcc.constants as C
 import uvmcc.utils as U
+import uvmcc.database_utils as D
 
 from typing import Callable
 
@@ -8,7 +9,8 @@ def _tag_bug_fixers(e: str) -> str:
     return e + '\n\nPaging Bug Fixers: ' + ''.join([U.format_discord_user_tag(e) for e in C.BUG_FIXERS.values()])
 
 
-DB_ERROR_MSG = _tag_bug_fixers('There was a database error :(')
+DB_ERROR_MSG: Callable[[D.QueryExitCode], str] \
+    = lambda exit_code: _tag_bug_fixers(f'There was a database error (exit_code={exit_code}) :(')
 DB_INTEGRITY_ERROR_MSG = _tag_bug_fixers('There was a database integrity error :(')
 USERNAME_IN_DB_NOT_FOUND_MSG = \
     _tag_bug_fixers('There was a database integrity error :( Our database contained a username not found '

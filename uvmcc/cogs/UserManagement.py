@@ -13,10 +13,13 @@ import aiohttp
 import asyncio
 import datetime
 import json
-import requests
+import time
 
 
 class UserManagement(commands.Cog):
+
+    VALIDATE_IAM_RANDOM_CODE_LEN = 6
+
 
     def __init__(self, bot):
         self.bot = bot
@@ -186,7 +189,7 @@ class UserManagement(commands.Cog):
                   site: discord.Option(str,
                                        description='What site is this username for?',
                                        autocomplete=discord.utils.basic_autocomplete(_autocomplete_sites_for_db_username))):
-        exit_code, results = await D.db_query('SELECT username FROM ChessUsernames '
+        exit_code, results = await D.db_query('SELECT username, discord_id FROM ChessUsernames '
                                               'WHERE username LIKE ? '
                                               'AND site = ?',
                                               params=(username, site))
@@ -198,12 +201,76 @@ class UserManagement(commands.Cog):
             return await ctx.respond(f'Please run `/add {username} '
                                      f'{f"({site})" if site is not None else "<site>"}` first!')
 
-        if len(results) != 1:
-            return await ctx.respond(E.DB_INTEGRITY_ERROR_MSG +
-                                     f' There are multiple records for `{username}` ({site})')
+        assert len(results) == 1, E.DB_INTEGRITY_ERROR_MSG + ' There are multiple records for `{username}` ({site})'
+
+        # Now check if the user's profile is already linked to this entry in the database
+        if results[0][1] == str(ctx.author):
+            e = discord.Embed(title=f'Already linked {username} (Lichess) to {ctx.author}',
+                              description=f'Use `/show player:me` to see your status!')
+            return await ctx.respond(embed=e)
 
         site = site.lower()
         if site == U.SupportedSites.LICHESS:
+            random_code = U.random_code(UserManagement.VALIDATE_IAM_RANDOM_CODE_LEN)
+            code_expires = datetime.timedelta(minutes=5)
+            delay_seconds = 10
+
+            e = discord.Embed(title=f'Verify that you are {username} on Lichess',
+                              description=f'1. Paste the code `{random_code}` somewhere in '
+                                          f'[your Lichess bio](https://lichess.org/account/profile) to verify your '
+                                          f'identity. The code expires '
+                                          f'{U.format_discord_relative_time(unix_time=time.time(), td=code_expires)}.\n'
+                                          f'2. Save your changes and this message will update within '
+                                          f'{delay_seconds} seconds.\n'
+                                          f'3. Once verified, you can remove the code from your bio.',
+                              color=C.ACTION_REQUESTED_COLOR)
+            await ctx.respond(embed=e, ephemeral=True)
+
+            '''
+            Get public profile data repeatedly at an interval, asynchronously
+            
+            Don't look too hard at the code below, it might hurt
+            '''
+
+            URL = f'https://lichess.org/api/user/{username}'
+            async def check_bio(session: aiohttp.ClientSession) -> bool:
+                async with session.get(URL) as response:
+                    data = await response.json()
+                    try:
+                        bio = data['profile']['bio']
+                    except KeyError:
+                        logger.warning('`data[\'profile\'][\'bio\']` not found when requesting user public data')
+
+                    if random_code in bio:
+                        return True
+
+            async def check_bio_loop() -> bool:
+                while True:
+                    async with aiohttp.ClientSession() as session:
+                        code_found = await check_bio(session)
+                        if code_found:
+                            return True
+                    await asyncio.sleep(delay_seconds)
+
+            try:
+                code_found = await asyncio.wait_for(check_bio_loop(), code_expires.total_seconds())
+                if code_found:
+                    raise asyncio.CancelledError
+            except asyncio.TimeoutError:
+                # Timed out, check bio one last time (last check might have been 9s ago)
+                async with aiohttp.ClientSession() as session:
+                    code_found = await check_bio(session)
+            except asyncio.CancelledError:
+                # Found the code, stopping early
+                pass
+
+            ''' okay, you can look again '''
+            if not code_found:
+                e = discord.Embed(title=f'Cound not verify {username} on Lichess',
+                                  description=f'Code expired. Please try again.',
+                                  color=C.ACTION_FAILED_COLOR)
+                return await ctx.interaction.edit_original_response(embed=e)
+
             # Update the discord_id for the given username in ChessUsernames
             discord_id = str(ctx.author)
             exit_code, results = await D.db_query('UPDATE ChessUsernames '
@@ -214,10 +281,13 @@ class UserManagement(commands.Cog):
             if exit_code != D.QueryExitCode.SUCCESS:
                 e = discord.Embed(title='Could not link username',
                                   description=f'{E.DB_ERROR_MSG(exit_code)}',
-                                  color=discord.Color.blurple())
+                                  color=C.ACTION_FAILED_COLOR)
                 return await ctx.interaction.edit_original_response(embed=e)
 
-            await ctx.respond(f'Linked `{username}` ({site}) to `{discord_id}`. Use `/show me` to see your live games!')
+            e = discord.Embed(title=f'Linked `{username}` (Lichess) to `{ctx.author}`',
+                              description='Use `/show player:me` to see your status!',
+                              color=C.ACTION_SUCCEEDED_COLOR)
+            return await ctx.interaction.edit_original_response(embed=e)
         elif site == U.SupportedSites.CHESS_COM:
             return await ctx.respond('Chess.com is not currently supported, but it will be soon!')
         else:

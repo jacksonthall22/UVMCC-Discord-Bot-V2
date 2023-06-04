@@ -193,8 +193,8 @@ class Show(commands.Cog):
 
         e.set_footer(text=featured_game_description.format('', '', '') + C.EMBED_FOOTER)
 
-        # await ctx.respond(embed=e)
-        msg = await ctx.respond(embed=e)
+        await ctx.respond(embed=e)
+        # msg = await ctx.respond(embed=e)
 
         if not stream_new_moves or not playing:
             return
@@ -316,7 +316,10 @@ class Show(commands.Cog):
             f'{packet["players"]["black"]["ratingDiff"]:+}' if packet.get('rated') else '')
                           + C.EMBED_FOOTER)
 
-        return await msg.edit(embed=e)
+        # TODO compare loading speed in Discord of these methods.
+        #   `edit_original_response()` is a "lower level interface" to `InteractionMessage.edit()`
+        return await ctx.interaction.edit_original_response(embed=e)
+        # return await msg.edit(embed=e)
 
     @staticmethod
     async def _get_usernames(ctx, player, site) -> Tuple[List[str], str | None]:

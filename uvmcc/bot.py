@@ -6,7 +6,7 @@ import discord
 
 
 bot = discord.Bot()
-#
+
 
 @bot.event
 async def on_ready():

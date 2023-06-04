@@ -10,6 +10,8 @@ import enum
 import itertools
 import aiohttp
 import ndjson
+import random
+import datetime
 
 
 class SupportedSites(enum.StrEnum):
@@ -26,6 +28,27 @@ class ClockJson(TypedDict):
     increment: int
     totalTime: NotRequired[int]
 
+
+def random_code(length: int,
+                *,
+                alphabet: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') -> str:
+    """
+    Return a random string of the given length using the given alphabet.
+    """
+    return ''.join(random.choices(alphabet, k=length))
+
+
+def format_discord_relative_time(unix_time: int | float = datetime.datetime.now().timestamp(),
+                                 *,
+                                 dt: datetime.timedelta | None = None) -> str:
+    """
+    Return a string that can be pasted in a Discord message to show an updating time
+    like "2 days ago" or "in 2 days" from the given the Unix timestamp, and optionally
+    a ``datetime.timedelta`` object to add to it.
+    """
+    if dt is not None:
+        unix_time += dt.total_seconds()
+    return f'<t:{round(unix_time)}:R>'
 
 def format_lichess_time_control(clock_json: ClockJson) -> str:
     """

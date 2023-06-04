@@ -3,6 +3,7 @@ from uvmcc import __version__
 from typing import Callable
 
 import chess
+import discord
 
 import dotenv
 import logging
@@ -19,6 +20,12 @@ BUG_FIXERS = {
     'Cubigami#3114': '397943957625110540',
 }
 
+# Colors for Discord embed messages
+LICHESS_BROWN_COLOR = discord.Color(0xB58863)
+ACTION_REQUESTED_COLOR = discord.Color.blurple()
+ACTION_SUCCEEDED_COLOR = discord.Color.green()
+ACTION_FAILED_COLOR = discord.Color.red()
+
 # Berserk client session
 BERSERK_CLIENT = berserk.Client()
 
@@ -33,7 +40,6 @@ SanStrT = str
 UciStrT = str
 
 # Other
-LICHESS_BROWN_HEX = 0xB58863
 LINK_TO_CODE = 'https://github.com/jacksonthall22/UVMCC-Discord-Bot'
 EMBED_FOOTER = f'♟  I\'m a bot, beep boop  ♟  Click my icon for the code  ♟  v{__version__}  ♟'
 LICHESS_GAME_LINK: Callable[[str, chess.Color], str] \

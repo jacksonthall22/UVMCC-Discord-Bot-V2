@@ -386,20 +386,18 @@ class Show(commands.Cog):
                                         description='Which chess site?',
                                         choices=U.SUPPORTED_SITES_LIST) = None):
         e = discord.Embed(title='Lichess Player Statuses',
-                          color=C.LICHESS_BROWN_HEX)
+                          color=C.LICHESS_BROWN_COLOR)
         e.set_author(name=self.bot.user.name,
                      url=C.LINK_TO_CODE)
 
         await ctx.response.defer(invisible=False)
         usernames, msg_on_empty = await Show._get_usernames(ctx, player, site)
-        print('test: usernames (1):', usernames)
         await Show._show_usernames(ctx,
                                    e,
                                    usernames,
                                    msg_on_empty=msg_on_empty,
                                    stream_new_moves=False,
                                    only_live=False)
-
 
     @discord.slash_command(name='watch',
                            description='Watch a game unfold live! (Might be buggy)')
@@ -411,16 +409,16 @@ class Show(commands.Cog):
                                          description='Which chess site?',
                                          choices=U.SUPPORTED_SITES_LIST) = None):
         e = discord.Embed(title='Watching Live',
-                          color=C.LICHESS_BROWN_HEX)
+                          color=C.LICHESS_BROWN_COLOR)
         e.set_author(name=self.bot.user.name,
                      url=C.LINK_TO_CODE)
 
         await ctx.response.defer(invisible=False)
-        usernames = await Show._get_usernames(ctx, player, site)
-        print('test: usernames (2):', usernames)
+        usernames, msg_on_empty = await Show._get_usernames(ctx, player, site)
         await Show._show_usernames(ctx,
                                    e,
                                    usernames,
+                                   msg_on_empty=msg_on_empty,
                                    stream_new_moves=True,
                                    only_live=True)
 

@@ -180,7 +180,7 @@ class UserManagement(commands.Cog):
                             f'from the database.')
 
     @discord.slash_command(name='iam',
-                           description='Link your Discord tag to a chess username so you can use `/show me`')
+                           description='Link your Discord tag to a chess username so you can use `/show player:me`')
     async def iam(self,
                   ctx: discord.ApplicationContext,
                   username: discord.Option(str,
@@ -198,8 +198,8 @@ class UserManagement(commands.Cog):
             return await ctx.respond(E.DB_ERROR_MSG(exit_code))
 
         if not results:
-            return await ctx.respond(f'Please run `/add {username} '
-                                     f'{f"({site})" if site is not None else "<site>"}` first!')
+            return await ctx.respond(f'Please run `/add player:{username} '
+                                     f'site:<{"/".join(U.SupportedSites) if site is None else site}>` first!')
 
         assert len(results) == 1, E.DB_INTEGRITY_ERROR_MSG + ' There are multiple records for `{username}` ({site})'
 

@@ -52,8 +52,8 @@ class UserManagement(commands.Cog):
         partial_usernames = ctx.options['username']
 
         # Get all chess usernames in database that start with the given username (a partial match)
-        exit_code, results = await D.db_query('SELECT username FROM ChessUsernames '
-                                              'WHERE username LIKE ?',
+        exit_code, results = await D.db_query('SELECT username FROM chess_usernames '
+                                              'WHERE username LIKE %s',
                                               params=(f'{partial_usernames}%',))
         # exit_code, results = await D.db_query('SELECT username FROM ChessUsernames')
 
@@ -71,8 +71,8 @@ class UserManagement(commands.Cog):
         """
         partial_username = ctx.options['username']
 
-        exit_code, results = await D.db_query('SELECT site FROM ChessUsernames '
-                                              'WHERE username = ?',
+        exit_code, results = await D.db_query('SELECT site FROM chess_usernames '
+                                              'WHERE username = %s',
                                               params=(partial_username,))
 
         if exit_code != D.QueryExitCode.SUCCESS:
@@ -110,16 +110,16 @@ class UserManagement(commands.Cog):
             username_proper_caps: str = user_data['name']
 
             ''' Insert username  '''
-            exit_code, _ = await D.db_query('INSERT INTO ChessUsernames(username, site) '
-                                            'VALUES (?, ?)',
+            exit_code, _ = await D.db_query('INSERT INTO chess_usernames(username, site) '
+                                            'VALUES (%s, %s)',
                                             params=(username_proper_caps,
                                                     U.SupportedSites.LICHESS))
             if exit_code == D.QueryExitCode.INTEGRITY_ERROR:
                 # Probably trying to insert duplicate primary key, the (username, site) pair
                 # Let's verify what's happening and send an appropriate error msg
-                exit_code, results = await D.db_query('SELECT username, site FROM ChessUsernames '
-                                                      'WHERE username LIKE ? '
-                                                      '      AND site = ?',
+                exit_code, results = await D.db_query('SELECT username, site FROM chess_usernames '
+                                                      'WHERE username LIKE %s '
+                                                      '      AND site = %s',
                                                       params=(username_proper_caps,
                                                               U.SupportedSites.LICHESS))
 
@@ -153,9 +153,9 @@ class UserManagement(commands.Cog):
         sites = (site,) if site is not None else tuple(U.SUPPORTED_SITES_LIST)
 
         # First get the matching database entries
-        exit_code, results = await D.db_query('SELECT username, site FROM ChessUsernames '
-                                              'WHERE username LIKE ? '
-                                              '      AND site IN (SELECT site FROM json_each(?))',
+        exit_code, results = await D.db_query('SELECT username, site FROM chess_usernames '
+                                              'WHERE username LIKE %s '
+                                              '      AND site IN (SELECT site FROM json_each(%s))',
                                               params=(username, json.dumps(sites)))
 
 
@@ -167,9 +167,9 @@ class UserManagement(commands.Cog):
                                      f'is not in the database.')
 
         # Remove the matching database entries
-        exit_code, _ = await D.db_query('DELETE FROM ChessUsernames '
-                                        'WHERE username LIKE ? '
-                                        '      AND site IN (SELECT site FROM json_each(?))',
+        exit_code, _ = await D.db_query('DELETE FROM chess_usernames '
+                                        'WHERE username LIKE %s '
+                                        '      AND site IN (SELECT site FROM json_each(%s))',
                                         params=(username, json.dumps(sites)))
 
         if exit_code != D.QueryExitCode.SUCCESS:
@@ -189,9 +189,9 @@ class UserManagement(commands.Cog):
                   site: discord.Option(str,
                                        description='What site is this username for?',
                                        autocomplete=discord.utils.basic_autocomplete(_autocomplete_sites_for_db_username))):
-        exit_code, results = await D.db_query('SELECT username, discord_id FROM ChessUsernames '
-                                              'WHERE username LIKE ? '
-                                              'AND site = ?',
+        exit_code, results = await D.db_query('SELECT username, discord_id FROM chess_usernames '
+                                              'WHERE username LIKE %s '
+                                              'AND site = %s',
                                               params=(username, site))
 
         if exit_code != D.QueryExitCode.SUCCESS:
@@ -273,9 +273,9 @@ class UserManagement(commands.Cog):
 
             # Update the discord_id for the given username in ChessUsernames
             discord_id = str(ctx.author)
-            exit_code, results = await D.db_query('UPDATE ChessUsernames '
-                                                  'SET discord_id = ? '
-                                                  'WHERE username LIKE ?',
+            exit_code, results = await D.db_query('UPDATE chess_usernames '
+                                                  'SET discord_id = %s '
+                                                  'WHERE username LIKE %s',
                                                   params=(discord_id, username))
 
             if exit_code != D.QueryExitCode.SUCCESS:

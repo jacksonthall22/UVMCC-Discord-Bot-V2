@@ -337,10 +337,10 @@ class Show(commands.Cog):
         msg_on_empty = None
         if not player:
             # Show all players in db
-            _, results = await D.db_query('SELECT username FROM ChessUsernames '
-                                          'WHERE site = ?'
+            _, results = await D.db_query('SELECT username FROM chess_usernames '
+                                          'WHERE site = %s '
                                           'ORDER BY username',
-                                          params=(U.SupportedSites.LICHESS,),
+                                          params=(str(U.SupportedSites.LICHESS),),
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
             if not usernames:
@@ -348,8 +348,8 @@ class Show(commands.Cog):
                                f'`/add player:<username> site:<{"/".join(U.SupportedSites)}>`!'
         elif player.lower() == 'me':
             # Show chess accounts linked to the author's discord_id
-            _, results = await D.db_query('SELECT username FROM ChessUsernames '
-                                          'WHERE discord_id = ?',
+            _, results = await D.db_query('SELECT username FROM chess_usernames '
+                                          'WHERE discord_id = %s',
                                           params=(str(ctx.author),),
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]
@@ -360,8 +360,8 @@ class Show(commands.Cog):
                                f'`/iam player:<username> site:<{"/".join(U.SupportedSites)}>` to link one!'
         elif U.is_valid_discord_tag(player):
             # Show one player by looking up chess accounts linked to their discord_id
-            _, results = await D.db_query('SELECT username FROM ChessUsernames '
-                                          'WHERE discord_id = ?',
+            _, results = await D.db_query('SELECT username FROM chess_usernames '
+                                          'WHERE discord_id = %s',
                                           params=(player,),
                                           auto_respond_on_fail=ctx)
             usernames = [e for e, in results]

@@ -32,6 +32,7 @@ parso==0.8.3
 pickleshare==0.7.5
 pip==23.1.2
 prompt-toolkit==3.0.38
+psycopg2-binary==2.9.6
 pure-eval==0.2.2
 py-cord==2.4.1
 pycares==4.3.0
